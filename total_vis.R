@@ -1,5 +1,6 @@
 ####
 #### MN Parks Figures - TPL
+#### Total Visitation Across Parks. Differences in relative vis by data source
 #### 8/19/20
 ####
 
@@ -118,6 +119,17 @@ sm_sp_tall <- parks_ud %>%
 ggplot(sm_sp_tall) +
   geom_col(aes(x = Park_Name, y = visitors, fill = source))
 
+
+# stacked bar chart by data source
+ggplot(sm_sp_tall) +
+  geom_col(aes(x = source, y = visitors, fill = Park_Name), position = "fill") +
+  scale_fill_viridis_d(guide = guide_legend(reverse = TRUE)) +
+  ylab("Proportion of Visitors") +
+  xlab("Data Source") +
+  coord_flip() +
+  labs(title = "Proportion of Visitors Visiting Each Park According to Different Data Sources") +
+  theme_classic()
+
 # proportion of all observed by source?
 sm_sp_props <- sm_sp_tall %>%
   group_by(source) %>%
@@ -128,6 +140,10 @@ ggplot(sm_sp_props) +
   scale_fill_viridis_d() +
   ylab("Proportion of Visitors Visiting Each Park") +
   labs(title = "Proportion of all observed visitors visiting each park, by data source")
+
+ggplot(sm_sp_props) +
+  geom_col(aes(x = source, y = prop_vis, fill = Park_Name), position = "dodge") +
+  scale_fill_viridis_d()
 
 # and, on a map?
 sm_sp_props_sf <- parks_simple %>%
