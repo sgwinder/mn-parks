@@ -152,3 +152,15 @@ ggplot(sm_sp_js_avg_prop) +
        subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
        caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8") +
   theme_classic()
+
+# grouped by data source 
+
+ggplot(sm_sp_js_avg_prop) +
+  geom_col(aes(x = source, y = prop_vis, fill = Park_Name), position = "dodge") +
+  scale_fill_viridis_d() +
+  ylab("Proportion of Visitors") +
+  xlab("Data Source") +
+  labs(title = "June - Sept Proportion of Visitors Visiting Each Park According to Different Data Sources",
+       subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
+       caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8") +
+  theme_classic()
