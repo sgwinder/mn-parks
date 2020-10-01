@@ -81,7 +81,31 @@ soparc_totvis <- soparc_vis_c %>%
 soparc_totvis
 # soparc surveying happened for one week in June, and one week in September, 2019, for each park
 
-# since I don't have 2019 social media data, let's compare the soparc data to June-Sept 2018 for social media
+######################
+## Cuebiq
+
+cuebiq_vis <- read_excel("CellData/TotalVisitation.xlsx", sheet = "IdsByDay_Sept2020")
+cuebiq_vis
+tail(cuebiq_vis)
+# the 5/9 and 5/30 dates are a bit suspect, let's drop them
+
+# create a joinkey of park names
+parks <- tibble(Park_Name = soparc_totvis$Park_Name,
+       Park_short = str_extract(Park_Name, ".+(?=\\s)"))
+
+cuebiq_totvis <- cuebiq_vis %>%
+  mutate(day = date(day)) %>%
+  filter(!day %in% c(ymd("2019-05-09"), ymd("2019-05-30"))) %>%
+  group_by(ParkName) %>%
+  summarise(visitors = sum(`Count of unique visits`)) %>%
+  mutate(source = "CUEBIQ", vis_metric = "sum of unique visits 5/31 - 9/30") %>%
+  right_join(parks, by = c("ParkName" = "Park_short")) %>%
+  select(-ParkName)
+
+cuebiq_totvis
+
+
+# since I don't have 2019 social media data, let's compare the soparc  & cuebiq data to June-Sept 2018 for social media
 # (remember that i have the "total" average annual UD comparisons in `summarising_vis.R`)
 
 # filter to only June-sept 2018
@@ -92,6 +116,7 @@ ud_junesept18 <- monthly_tall %>%
   mutate(vis_metric = "sum of userdays between June and Sept of 2018")
 
 sm_sp_js_tall <- soparc_totvis %>%
+  bind_rows(cuebiq_totvis) %>%
   bind_rows(ud_junesept18)
 
 sm_sp_js_tall %>% group_by(source) %>%
@@ -121,7 +146,13 @@ ud_junesept_avg <- monthly_tall %>%
   mutate(vis_metric = "Average UD/year in June-Sept")
 
 sm_sp_js_avg_tall <- soparc_totvis %>%
-  bind_rows(ud_junesept_avg)
+  bind_rows(ud_junesept_avg, cuebiq_totvis)
+
+## Reorder factors for better plotting
+sm_sp_js_avg_tall$source <- factor(sm_sp_js_avg_tall$source, levels = c("SOPARC", "CUEBIQ", "flickr", "twitter", "instag"))
+#sm_sp_js_avg_tall$Park_Name <- factor(sm_sp_js_avg_tall$Park_Name, 
+#                                      levels = c("Culture Park", "Landmark Plaza", "Ecolab Plaza",
+#                                                 "Mears Park", "Kellogg Mall", "Rice Park"))
 
 sm_sp_js_avg_tall %>% group_by(source) %>%
   summarise(sum(visitors))
@@ -134,7 +165,7 @@ ggplot(sm_sp_js_avg_tall) +
   coord_flip() +
   labs(title = "June - Sept Proportion of Visitors Visiting Each Park According to Different Data Sources",
        subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
-       caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8") +
+       caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8, CUEBIQ = 17,969") +
   theme_classic()
 
 # how about as a side by side bar chart?
@@ -162,5 +193,8 @@ ggplot(sm_sp_js_avg_prop) +
   xlab("Data Source") +
   labs(title = "June - Sept Proportion of Visitors Visiting Each Park According to Different Data Sources",
        subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
-       caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8") +
+       caption = "Totals: SOPARC = 8382, CUEBIQ = 17,969, PUD = 18.8, TUD = 167, IUD = 394") +
   theme_classic()
+
+# write it out
+#ggsave("mn-parks/figs/summer_vis_by_dataset.png", width = 8, height = 6, units = "in")
