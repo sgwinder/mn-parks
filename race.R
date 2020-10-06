@@ -23,6 +23,13 @@ soparc_tots <- soparc_all %>%
   mutate(Park_Name = str_sub(park_day_month, end = -6))
 soparc_tots
 
+# create a joinkey of park names
+parks <- soparc_tots %>%
+  select(Park_Name) %>%
+  distinct() %>%
+  mutate(Park_short = str_extract(Park_Name, ".+(?=\\s)"))
+
+
 # Ok. Calculating % in each racial category, by park
 # Adding a column "unclassified" to add up to 100% of visitors
 soparc_race_by_park <- soparc_tots %>%
@@ -34,7 +41,11 @@ soparc_race_by_park <- soparc_tots %>%
 soparc_race_by_park_tall <- soparc_race_by_park %>%
   rename(TotVisitors = Visitors) %>%
   gather(key = "race", value = "visitors", Black, White, Other, Unclassified) %>%
-  mutate(percent = visitors/TotVisitors)
+  mutate(percent = visitors/TotVisitors*100,
+         source = "SOPARC")
+
+# ordering for plotting
+soparc_race_by_park_tall$race <- factor(soparc_race_by_park_tall$race, levels = c("White", "Black", "Other", "Unclassified"))
 
 ggplot(soparc_race_by_park_tall) +
   geom_col(aes(x = Park_Name, y = percent, fill = race))
@@ -45,7 +56,7 @@ soparc_race_perc <- soparc_race_by_park %>%
   summarise_at(vars(Black, White, Other, Unclassified, Visitors), .funs = sum) %>%
   rename(TotVisitors = Visitors) %>%
   gather(key = "race", value = "visitors", Black, White, Other, Unclassified) %>%
-  mutate(percent = visitors/TotVisitors, 
+  mutate(percent = visitors/TotVisitors * 100, 
          source = "SOPARC") 
 soparc_race_perc
 
@@ -74,9 +85,10 @@ cuebiq_race <- cuebiq_demo %>%
 cuebiq_race_by_park <- cuebiq_race %>%
   filter(!is.na(Park)) %>%
   group_by(Park) %>%
-  summarise(perc_white_weighted = sum(visitors*perc_white) / sum(visitors),
-            perc_black_weighted = sum(visitors*perc_black) / sum(visitors),
-            perc_other_weighted = sum(visitors*perc_other) / sum(visitors))
+  summarise(perc_white_weighted = sum(visitors*perc_white) / sum(visitors) * 100,
+            perc_black_weighted = sum(visitors*perc_black) / sum(visitors) * 100,
+            perc_other_weighted = sum(visitors*perc_other) / sum(visitors) * 100) %>%
+  left_join(parks, by = c(Park = "Park_short"))
 cuebiq_race_by_park
 
 # make it tall and match the soparc data
@@ -84,14 +96,19 @@ cuebiq_race_by_park_tall <- cuebiq_race_by_park %>%
   rename(Black = perc_black_weighted, White = perc_white_weighted, Other = perc_other_weighted) %>%
   gather(key = "race", value = "percent", Black, White, Other) %>%
   mutate(source = "CUEBIQ")
+cuebiq_race_by_park_tall
+
+# ordering for plotting
+cuebiq_race_by_park_tall$race <- factor(cuebiq_race_by_park_tall$race, levels = c("White", "Black", "Other", "Unclassified"))
+
 
 # And, calculate overall. Need to go back a step for this (since %s)
 cuebiq_race_totals <- cuebiq_race %>%
   ungroup() %>%
   filter(!is.na(Park)) %>%
-  summarise(White = sum(visitors*perc_white) / sum(visitors),
-            Black = sum(visitors*perc_black) / sum(visitors),
-            Other = sum(visitors*perc_other) / sum(visitors)) %>%
+  summarise(White = sum(visitors*perc_white) / sum(visitors) * 100,
+            Black = sum(visitors*perc_black) / sum(visitors) * 100,
+            Other = sum(visitors*perc_other) / sum(visitors) * 100) %>%
   gather(key = "race", value = "percent") %>%
   mutate(source = "CUEBIQ")
 
@@ -116,11 +133,22 @@ ggplot(race) +
 
 
 ### Let's try by park
+
 race_park <- soparc_race_by_park_tall %>%
   bind_rows(cuebiq_race_by_park_tall)
 
 race_park
 
 ggplot(race_park) +
-  geom_col(aes(x = source, y = percent, fill = race)) +
-  facet_wrap(~Park_Name)
+  geom_col(aes(x = Park_Name, y = percent, fill = race), position = "dodge") +
+  #scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#999999")) +
+  #scale_fill_manual(values = wesanderson::wes_palette("FantasticFox2")) +
+  scale_fill_brewer(palette = "Set2") +
+  #ggsci::scale_fill_uchicago() +
+  ylab("Percent of Visitors") +
+  xlab(NULL) +
+  facet_grid(rows = vars(source)) +
+  theme_bw()
+
+# write it out
+#ggsave("mn-parks/figs/race_by_park_by_dataset.png", width = 8, height = 6, units = "in")

@@ -99,11 +99,12 @@ gender <- soparc_gen_perc %>%
   bind_rows(cuebiq_gen_totals)
 
 ggplot(gender) +
-  geom_col(aes(x = source, y = percent, fill = gender), position = "fill") +
-  #scale_fill_brewer(palette = "Dark2") +
+  geom_col(aes(x = reorder(source, desc(source)), y = percent, fill = gender), position = "fill") +
+  scale_fill_brewer(palette = "Set2") +
   geom_hline(aes(yintercept = .5)) +
-  coord_flip() +
-  labs(title = "Estimated gender breakdown by dataset")
+  coord_flip() + 
+  labs(title = "Estimated gender breakdown by dataset") +
+  theme_bw()
 
 # write it out
 #ggsave("mn-parks/figs/gender_by_dataset.png", width = 6, heigh = 4, units = "in")

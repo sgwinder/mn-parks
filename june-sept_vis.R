@@ -9,6 +9,7 @@ library(tidyverse)
 library(foreign)
 library(readxl)
 library(lubridate)
+library(sf)
 
 setwd("~/Documents/TPL/MinnesotaParks/")
 
@@ -176,21 +177,24 @@ sm_sp_js_avg_prop <- sm_sp_js_avg_tall %>%
 
 ggplot(sm_sp_js_avg_prop) +
   geom_col(aes(x = Park_Name, y = prop_vis, fill = source), position = "dodge") +
-  scale_fill_viridis_d() +
+  scale_fill_brewer(palette = "Set2") +
   ylab("Proportion of Visitors") +
-  xlab("Data Source") +
+  xlab(NULL) +
   labs(title = "June - Sept Proportion of Visitors Visiting Each Park According to Different Data Sources",
        subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
        caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8") +
   theme_classic()
 
+#ggsave("mn-parks/figs/summ_vis_by_park.png", width = 8, height = 6, units = "in")
+
 # grouped by data source 
 
 ggplot(sm_sp_js_avg_prop) +
-  geom_col(aes(x = source, y = prop_vis, fill = Park_Name), position = "dodge") +
-  scale_fill_viridis_d() +
+  geom_col(aes(x = source, y = prop_vis, fill = Park_Name), position = "fill") +
+  scale_fill_brewer(palette = "Set2") +
   ylab("Proportion of Visitors") +
   xlab("Data Source") +
+  #coord_flip() +
   labs(title = "June - Sept Proportion of Visitors Visiting Each Park According to Different Data Sources",
        subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
        caption = "Totals: SOPARC = 8382, CUEBIQ = 17,969, PUD = 18.8, TUD = 167, IUD = 394") +
@@ -198,3 +202,5 @@ ggplot(sm_sp_js_avg_prop) +
 
 # write it out
 #ggsave("mn-parks/figs/summer_vis_by_dataset.png", width = 8, height = 6, units = "in")
+
+### Todo: I wonder if I could do seasonal trends? Like Carrie did in her paper?
