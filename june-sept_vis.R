@@ -13,6 +13,20 @@ library(sf)
 
 setwd("~/Documents/TPL/MinnesotaParks/")
 
+# geodataviz palette
+# https://github.com/OrdnanceSurvey/GeoDataViz-Toolkit/blob/master/Colours/GDV-colour-palettes-v0.7.json
+gdv_pal <- c("#FF1F5B",
+             "#00CD6C",
+             "#009ADE",
+             "#AF58BA",
+             "#FFC61E",
+             "#F28522",
+             "#A0B1BA",
+             "#A6761D",
+             "#E9002D",
+             "#FFAA00",
+             "#00B000")
+
 # read in data
 # let's use the total monthly data now
 flickr <- read_csv("pud/userdays_total_monthly_bypid.csv") # It looks like we didn't share avg_annual_ud in MN_parks_flickr
@@ -192,6 +206,7 @@ ggplot(sm_sp_js_avg_prop) +
 ggplot(sm_sp_js_avg_prop) +
   geom_col(aes(x = source, y = prop_vis, fill = Park_Name), position = "fill") +
   scale_fill_brewer(palette = "Set2") +
+  #scale_fill_manual(values = gdv_pal) +
   ylab("Proportion of Visitors") +
   xlab("Data Source") +
   #coord_flip() +
