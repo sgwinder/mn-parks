@@ -6,6 +6,7 @@
 library(tidyverse)
 library(sf)
 library(foreign)
+library(readxl)
 
 setwd("~/Documents/TPL/MinnesotaParks/")
 
@@ -137,3 +138,76 @@ ggplot(homes_to_parks_names_visitors) +
   labs(title = "Distance traveled to each park, by unique visitors")
 
 ### TODO: add back in soparc, and decide between the two plots above
+
+# Is jewell county, KS causing that big jump?
+ggplot(homes_to_parks_names_visit_days %>% filter(county != "Jewell")) +
+  stat_ecdf(aes(dist, col = source)) +
+  facet_wrap(~Park_Name) +
+  xlab("Distance (m)") +
+  labs(title = "Distance traveled to each park, by visit days")
+
+# no, actually. 
+homes_to_parks_names_visit_days %>%
+  group_by(source, tract, county, state, dist, Park_Name) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+
+# let's look at only MN visitors
+ggplot(homes_to_parks_names_visit_days %>% filter(state == "Minnesota")) +
+  stat_ecdf(aes(dist, col = source)) +
+  facet_wrap(~Park_Name) +
+  xlab("Distance (m)") +
+  labs(title = "Distance traveled to each park, by visit days")
+
+# the big jump at ~167 km is Crow Wing County, MN. On wikipedia, I dont' see a population center
+## here, but it does seem to be roughly in the center of MN. I'm worried this jump reflects
+## people saying that they're from "Minnesota", not from a specific city. 
+
+## Bleh. Well, let's go ahead and add on CUEBIQ and ask spencer for his thoughts later
+
+############# Cuebiq #########
+# Ok. adding in the Cuebiq data
+cuebiq_demo <- read_excel("CellData/TravelDistanceAndDemographics.xlsx", sheet = "ForAnalysis", skip = 1)
+cuebiq_demo
+
+# create a joinkey of park names
+parks <- tibble(Park_Name = st_drop_geometry(parks_centroids)$Park_Name,
+                Park_short = str_extract(Park_Name, ".+(?=\\s)"))
+
+# to match the flickr data, i just need one row per park per user
+# start by cutting down the df, then use the tidy "uncount"
+cuebiq_demo %>% group_by(`State of BG`) %>% summarise()
+
+cuebiq_to_parks <- cuebiq_demo %>% 
+  filter(!`State of BG` %in% c("Hawaii", "Alaska")) %>%
+  select(Park, visitors = `Number of unique devices from this block group seen on this day in this park`,
+         dist = `Distance to Parks (Meters)`) %>%
+  uncount(visitors) %>%
+  right_join(parks, by = c("Park" = "Park_short")) %>%
+  select(-Park) %>%
+  mutate(source = "CUEBIQ")
+cuebiq_to_parks
+
+# join to social media. We should use the visit days version, since it's clsoer to cuebiq
+homes_to_parks_names_visit_days
+
+combined <- bind_rows(cuebiq_to_parks, homes_to_parks_names_visit_days)
+
+ggplot(combined) +
+  stat_ecdf(aes(dist, col = source)) +
+  facet_wrap(~Park_Name) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = seq(0, 4e+06, length.out = 5),
+                     labels = seq(0, 4000, length.out = 5), 
+                     name = "Distance (km)") +
+  ylab("Cumulative proportion of visitors") +
+  labs(title = "Distance traveled to each park (from Continental US)") +
+  theme_bw()
+
+# dists for jewell county and crow wing county?
+combined %>% filter(county %in% c("Jewell", "Crow Wing"))
+# 168 km and 724 km
+
+ggsave("mn-parks/figs/distance_by_dataset.png", width = 8, heigh = 6, units = "in")
+
+
