@@ -208,6 +208,20 @@ ggplot(combined) +
 combined %>% filter(county %in% c("Jewell", "Crow Wing"))
 # 168 km and 724 km
 
-ggsave("mn-parks/figs/distance_by_dataset.png", width = 8, heigh = 6, units = "in")
+#ggsave("mn-parks/figs/distance_by_dataset.png", width = 8, heigh = 6, units = "in")
 
+# what about if we wrap by source and color by park? Clsoer to the vis figs
+ggplot(combined) +
+  stat_ecdf(aes(dist, col = Park_Name)) +
+  facet_wrap(~source) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = seq(0, 4e+06, length.out = 5),
+                     labels = seq(0, 4000, length.out = 5), 
+                     name = "Distance (km)") +
+  ylab("Cumulative proportion of visitors") +
+  labs(title = "Distance traveled to each park (from Continental US)") +
+  theme_bw()
+# interesting
 
+### Let's try to come up with an "average" ecdf to report for each park: TODO
+ecdf()

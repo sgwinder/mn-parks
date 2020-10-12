@@ -164,7 +164,8 @@ sm_sp_js_avg_tall <- soparc_totvis %>%
   bind_rows(ud_junesept_avg, cuebiq_totvis)
 
 ## Reorder factors for better plotting
-sm_sp_js_avg_tall$source <- factor(sm_sp_js_avg_tall$source, levels = c("SOPARC", "CUEBIQ", "flickr", "twitter", "instag"))
+sm_sp_js_avg_tall$source <- factor(sm_sp_js_avg_tall$source, levels = c("SOPARC", "CUEBIQ", "flickr", "twitter", "instag"),
+                                   labels = c("SOPARC", "CUEBIQ", "Flickr", "Twitter", "Instagram"))
 #sm_sp_js_avg_tall$Park_Name <- factor(sm_sp_js_avg_tall$Park_Name, 
 #                                      levels = c("Culture Park", "Landmark Plaza", "Ecolab Plaza",
 #                                                 "Mears Park", "Kellogg Mall", "Rice Park"))
@@ -201,6 +202,7 @@ ggplot(sm_sp_js_avg_prop) +
 
 #ggsave("mn-parks/figs/summ_vis_by_park.png", width = 8, height = 6, units = "in")
 
+
 # grouped by data source 
 
 ggplot(sm_sp_js_avg_prop) +
@@ -219,3 +221,50 @@ ggplot(sm_sp_js_avg_prop) +
 #ggsave("mn-parks/figs/summer_vis_by_dataset.png", width = 8, height = 6, units = "in")
 
 ### Todo: I wonder if I could do seasonal trends? Like Carrie did in her paper?
+
+### let's create a "combined" metric
+# Does just average proportion work?
+combined_avg_prop <- sm_sp_js_avg_prop %>%
+  group_by(Park_Name) %>%
+  summarise(avg_prop_vis = mean(prop_vis))
+
+ggplot(combined_avg_prop) +
+  geom_col(aes(x = reorder(Park_Name, avg_prop_vis), y = avg_prop_vis*100, fill = Park_Name)) +
+  scale_fill_brewer(palette = "Set2", guide = FALSE) +
+  xlab(NULL) +
+  scale_y_continuous(name = "Percent of Visitors") +
+  coord_flip() +
+  theme_classic()
+
+# write it out
+#ggsave("mn-parks/figs/summer_vis_average.png", width = 5, height = 4, units = "in")
+
+
+# try a grid, adding "Average" as a panel
+sm_sp_js_avg_prop
+
+props_together <- combined_avg_prop %>%
+  mutate(source = "Average") %>%
+  rename(prop_vis = avg_prop_vis) %>%
+  bind_rows(sm_sp_js_avg_prop)
+
+## Reorder factors for better plotting
+props_together$source <- factor(props_together$source, 
+                               levels = c("Average", "SOPARC", "CUEBIQ", "Flickr", "Twitter", "Instagram"))
+
+
+
+ggplot(props_together) +
+  geom_col(aes(x = reorder(Park_Name, prop_vis), y = prop_vis*100, fill = Park_Name), position = "dodge") +
+  scale_fill_brewer(palette = "Set2", guide = FALSE) +
+  ylab("Percent of Visitors") +
+  xlab(NULL) +
+ # labs(title = "June - Sept Proportion of Visitors Visiting Each Park According to Different Data Sources",
+ #      subtitle = "Social media is the AVERAGE UDs posted from June-Sept (all years)",
+ #      caption = "Totals: TUD = 167, SOPARC = 8382, IUD = 394, PUD = 18.8") +
+  coord_flip() +
+  theme_classic() +
+  facet_wrap(~source)
+
+# save it
+#ggsave("mn-parks/figs/summer_vis_by_dataset_avg.png", width = 8, height = 5, units = "in")
