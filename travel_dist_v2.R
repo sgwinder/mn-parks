@@ -224,4 +224,81 @@ ggplot(combined) +
 # interesting
 
 ### Let's try to come up with an "average" ecdf to report for each park: TODO
-ecdf()
+# find max distance in dataset
+max_dist <- max(combined$dist)
+
+indiv_ecdf_function <- function(source_abb){
+  subset_dist <- combined %>% filter(Park_Name == "Ecolab Plaza", source == source_abb)
+  ecdf_fun <- ecdf(subset_dist$dist)
+  ecdf_seq <- seq(0, max_dist, length.out = 1000)
+  ecdf_vec <- ecdf_fun(ecdf_seq)
+  output <- tibble(cum_prob = ecdf_vec, x = ecdf_seq, source = source_abb)
+  return(output)
+}
+
+indiv_ecdf_function("CUEBIQ")
+
+ecolab <- map_df(unique(combined$source), ~indiv_ecdf_function(.))
+
+ggplot(ecolab) +
+  geom_line(aes(x = x, y = cum_prob, col = source))
+
+### Great. So that works, looping over source, but with fixed park
+## Let's see if I can generalize it
+park_source <- list("Rice Park", "CUEBIQ")
+
+gen_ecdf_function <- function(park_source){
+  park_abb <- park_source[[1]]
+  source_abb <- park_source[[2]]
+  subset_dist <- combined %>% filter(Park_Name == park_abb, source == source_abb)
+  ecdf_fun <- ecdf(subset_dist$dist)
+  ecdf_seq <- seq(0, max_dist, length.out = 1000)
+  ecdf_vec <- ecdf_fun(ecdf_seq)
+  output <- tibble(cum_prob = ecdf_vec, dist = ecdf_seq, source = source_abb, Park_Name = park_abb)
+  return(output)
+}
+
+gen_ecdf_function(list("Culture Park", "flickr"))
+
+# do it for everything
+all_ecdfs <- cross2(unique(combined$Park_Name), unique(combined$source)) %>%
+  map_df(~gen_ecdf_function(.))
+
+ggplot(all_ecdfs) +
+  geom_line(aes(x = dist, y = cum_prob, col = source)) +
+  facet_wrap(~Park_Name) 
+
+# amazing.
+# Ok, calculate the average ecdf for each park
+avg_ecdf <- all_ecdfs %>%
+  group_by(Park_Name, dist) %>%
+  summarise(cum_prob = mean(cum_prob)) %>%
+  mutate(source = "Average")
+
+ggplot(avg_ecdf) +
+  geom_line(aes(x = dist, y = cum_prob, col = Park_Name))
+
+# how about if I add it to the other plot instead
+ecdfs_together <- all_ecdfs %>%
+  bind_rows(avg_ecdf)
+
+ggplot(ecdfs_together) +
+  geom_line(aes(x = dist, y = cum_prob, col = source, lty = source)) +
+  scale_color_manual(breaks = c("Average", "CUEBIQ", "flickr", "twitter"),
+                     values = c("Black", '#1b9e77','#d95f02','#7570b3'),
+                     labels = c("Average", "CUEBIQ", "Flickr", "Twitter"),
+                     name = NULL) +
+  scale_linetype_manual(breaks = c("Average", "CUEBIQ", "flickr", "twitter"),
+                        values = c(1, 2, 2, 2),
+                        labels = c("Average", "CUEBIQ", "Flickr", "Twitter"),
+                        name = NULL) +
+  facet_wrap(~Park_Name) +
+  scale_x_continuous(breaks = seq(0, 4e+06, length.out = 5),
+                     labels = seq(0, 4000, length.out = 5), 
+                     name = "Distance (km)") +
+  ylab("Cumulative proportion of visitors") +
+  labs(title = "Distance traveled to each park (from Continental US)") +
+  theme_bw()
+
+## write it out
+#ggsave("mn-parks/figs/distance_by_dataset_avg.png", width = 8, height = 6, units = "in")
