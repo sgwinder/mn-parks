@@ -104,7 +104,40 @@ ggplot(gender) +
   geom_hline(aes(yintercept = .5)) +
   coord_flip() + 
   labs(title = "Estimated gender breakdown by dataset") +
+  xlab(NULL) +
+  ylab("Percent of Visitors") +
   theme_bw()
 
 # write it out
 #ggsave("mn-parks/figs/gender_by_dataset.png", width = 6, heigh = 4, units = "in")
+
+### What about by park?
+
+# create a joinkey of park names
+# create a joinkey of park names
+parks <- soparc_tots %>%
+  select(Park_Name) %>%
+  distinct() %>%
+  mutate(Park_short = str_extract(Park_Name, ".+(?=\\s)"))
+parks
+
+soparc_gen_by_park_perc <- soparc_gen_by_park_tall %>%
+  group_by(Park_Name) %>%
+  mutate(percent = visitors / sum(visitors),
+         source = "SOPARC")
+
+gender_parks <- cuebiq_gen_by_park_tall %>%
+  left_join(parks, by = c(Park = "Park_short")) %>%
+  select(-Park) %>%
+  bind_rows(soparc_gen_by_park_perc)
+
+ggplot(gender_parks) +
+  geom_col(aes(x = Park_Name, y = percent*100, fill = gender), position = "dodge") +
+  scale_fill_brewer(name = "Gender", labels = c("Female", "Male"), palette = "Set2") +
+  ylab("Percent of Visitors") +
+  xlab(NULL) +
+  facet_grid(rows = vars(source)) +
+  theme_bw()
+
+# write it out
+#ggsave("mn-parks/figs/gender_by_park_by_dataset.png", width = 8, height = 6, units = "in")

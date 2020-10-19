@@ -193,6 +193,24 @@ homes_to_parks_names_visit_days
 
 combined <- bind_rows(cuebiq_to_parks, homes_to_parks_names_visit_days)
 
+## do some data summaries
+combined %>%
+  group_by(source) %>%
+  summarise(n())
+
+# how many from within 50 km? roughly city boundaries
+combined %>%
+  group_by(city = dist < 50000, source) %>%
+  summarise(n = n()) %>%
+  spread(key = city, value = n) %>%
+  mutate(proportion_city = `TRUE` / (`FALSE` + `TRUE`))
+
+
+# how many unique visitors?
+homes_to_parks_names_visitors %>%
+  group_by(source) %>%
+  summarise(n())
+
 ggplot(combined) +
   stat_ecdf(aes(dist, col = source)) +
   facet_wrap(~Park_Name) +
