@@ -320,3 +320,63 @@ ggplot(ecdfs_together) +
 
 ## write it out
 #ggsave("mn-parks/figs/distance_by_dataset_avg.png", width = 8, height = 6, units = "in")
+
+
+
+
+########## Playing with a bar chart grouped by different distances (per kristen's request) ####
+# “For now, I think it would be nice to break up the distance traveled into categories - 
+# within a half mile, then half mile to three miles (roughly St. Paul), then up to twenty miles 
+# (roughly the metro area), then above 100 miles.”
+combined
+
+# First, let's add columns for distance in miles, and then for bins
+combined_mi <- combined %>%
+  mutate(dist_mi = dist / 1609.344,
+         dist_cat = cut(dist_mi, 
+                        breaks = c(0, .5, 3, 20, 100, max(dist_mi)), 
+                        labels = c("< 0.5", "0.5 - 3", "3 - 20", "20 - 100", "> 100"),
+                        include.lowest = TRUE))
+
+ggplot(combined_mi) +
+  geom_bar(aes(x = dist_cat, fill = source), position = "dodge") +
+  facet_wrap(~Park_Name)
+
+# let's add those up individually, since I want "0"s for the park*source*distances that aren't represented
+
+dist_perc <- combined_mi %>%
+  group_by(Park_Name, source, dist_cat) %>%
+  summarise(visitors = n()) %>%
+  complete(Park_Name, source, dist_cat, fill = list(visitors = 0)) %>%
+  group_by(Park_Name, source) %>%
+  mutate(perc_vis = visitors / sum(visitors) * 100)
+
+ggplot(dist_perc) +
+  geom_col(aes(x = dist_cat, y = perc_vis, fill = fct_rev(source)), position = "dodge") +
+  scale_x_discrete(name = "Distance Traveled (miles)", limits = rev(levels(dist_perc$dist_cat))) +
+  ylab("Percent of Visitors") +
+  scale_fill_brewer(palette = "Set2",
+                    name = "Dataset",
+                    breaks = c("CUEBIQ", "flickr", "twitter"),
+                    labels = c("CUEBIQ", "Flickr", "Twitter")) +
+  coord_flip() +
+  facet_wrap(~Park_Name) +
+  theme_bw()
+
+# is it better with vertical bars?
+ggplot(dist_perc) +
+  geom_col(aes(x = dist_cat, y = perc_vis, fill = (source)), position = "dodge") +
+  scale_x_discrete(name = "Distance Traveled (miles)", 
+                   limits = (levels(dist_perc$dist_cat))) +
+  ylab("Percent of Visitors") +
+  scale_fill_brewer(palette = "Set2",
+                    name = "Dataset",
+                    breaks = c("CUEBIQ", "flickr", "twitter"),
+                    labels = c("CUEBIQ", "Flickr", "Twitter")) +
+  #coord_flip() +
+  facet_wrap(~Park_Name) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+# write it out
+#ggsave("mn-parks/figs/distance_by_dataset_barchart.png", width = 8, height = 5.5, units = "in")
